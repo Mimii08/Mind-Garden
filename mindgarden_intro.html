@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Mind Garden</title>
+
+  <!--
+  ============================================================
+  THE MIND GARDEN — Intro Screen
+  ============================================================
+  This file handles the opening cinematic of the game,
+  like Professor Oak in Pokemon.
+
+  STRUCTURE:
+  1. CSS  — all the visual styling and animations
+  2. HTML — the actual content (screens, characters, text)
+  3. JS   — controls what happens when (the logic)
+  ============================================================
+  -->
+
+  <style>
+
+    /* ── RESET ──────────────────────────────────────────────
+       Remove default browser spacing on everything.
+       * means "apply to all elements"
+    ───────────────────────────────────────────────────────── */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box; /* padding won't mess up widths */
+    }
+
+    /* ── BASE BODY ──────────────────────────────────────────
+       The whole page background.
+       overflow:hidden stops scrollbars appearing during animation
+    ───────────────────────────────────────────────────────── */
+    body {
+      background: #1A0A2E; /* deep purple — space-like start */
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      height: 100vh; /* full viewport height */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── SCREEN WRAPPER ─────────────────────────────────────
+       Everything lives inside this 480x640 box.
+       Think of it like the "game screen".
+    ───────────────────────────────────────────────────────── */
+    .game-screen {
+      width: 480px;
+      height: 640px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      box-shadow: 0 0 80px rgba(180, 130, 220, 0.4);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 1: TITLE SCREEN
+       The very first thing the player sees — dark, dramatic,
+       with the game title fading in like a movie.
+    ══════════════════════════════════════════════════════ */
+    #screen-title {
+      position: absolute;
+      inset: 0; /* shorthand for top/right/bottom/left: 0 */
+      background: radial-gradient(ellipse at center, #2D1B4E 0%, #0D0520 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      cursor: pointer;
+
+      /* starts invisible — JS will fade it in */
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    /* The floating sparkles behind the title */
+    .sparkle {
+      position: absolute;
+      font-size: 18px;
+      opacity: 0;
+      /* each sparkle gets its own animation via inline style */
+      animation: sparkle-float 4s ease-in-out infinite;
+    }
+
+    /* Sparkle floats up and fades */
+    @keyframes sparkle-float {
+      0%   { transform: translateY(0px) rotate(0deg);   opacity: 0;   }
+      20%  { opacity: 0.8; }
+      80%  { opacity: 0.6; }
+      100% { transform: translateY(-80px) rotate(180deg); opacity: 0; }
+    }
+
+    /* Main game title text */
+    .game-title {
+      font-size: 42px;
+      font-weight: 900;
+      color: white;
+      text-align: center;
+      line-height: 1.2;
+      letter-spacing: -1px;
+
+      /* opacity starts 0, JS animates it in */
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 1.2s ease, transform 1.2s ease;
+    }
+
+    /* The "THE" above the main title */
+    .game-title-small {
+      font-size: 14px;
+      letter-spacing: 6px;
+      color: #C5A3D4;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 1s ease 0.3s; /* delays 0.3s */
+    }
+
+    /* Pastel gradient on "Mind Garden" */
+    .title-gradient {
+      background: linear-gradient(135deg, #FFB7C5, #C5A3D4, #A8D8FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Subtitle tagline */
+    .game-tagline {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      max-width: 280px;
+      line-height: 1.6;
+      opacity: 0;
+      transition: opacity 1s ease 0.6s;
+    }
+
+    /* "Tap to continue" blinking prompt */
+    .tap-prompt {
+      position: absolute;
+      bottom: 40px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 2px;
+      /* blink animation defined below */
+      animation: blink 1.8s ease-in-out infinite;
+      opacity: 0;
+      transition: opacity 1s ease 1s;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 0.8; }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 2: CHARACTER INTRO
+       Rosie fills the whole screen like Professor Oak.
+       She talks. Player clicks through dialogue.
+    ══════════════════════════════════════════════════════ */
+    #screen-intro {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+
+      /* hidden by default — JS shows it */
+      opacity: 0;
+      pointer-events: none; /* can't click when hidden */
+      transition: opacity 0.8s ease;
+    }
+
+    /* Top half: character fills this area */
+    .char-stage {
+      flex: 1; /* takes up remaining space */
+      background: linear-gradient(180deg, #F5C6E0 0%, #E8D5F5 60%, #C9E8FF 100%);
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Moving background elements behind character */
+    .bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.3;
+      /* each circle gets its own float animation */
+    }
+
+    @keyframes float-slow {
+      0%, 100% { transform: translateY(0px) scale(1);   }
+      50%       { transform: translateY(-20px) scale(1.05); }
+    }
+
+    @keyframes float-med {
+      0%, 100% { transform: translateY(0px) rotate(0deg);   }
+      50%       { transform: translateY(-14px) rotate(10deg); }
+    }
+
+    /* The character SVG wrapper — bounces gently */
+    .character-wrap {
+      position: relative;
+      z-index: 10;
+      /* entrance animation: slides up from below */
+      transform: translateY(60px);
+      opacity: 0;
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  opacity 0.8s ease;
+    }
+
+    /* Gentle up-down float once visible */
+    .character-wrap.visible {
+      transform: translateY(0);
+      opacity: 1;
+      animation: char-float 3s ease-in-out infinite 0.8s;
+    }
+
+    @keyframes char-float {
+      0%, 100% { transform: translateY(0px);  }
+      50%       { transform: translateY(-12px); }
+    }
+
+    /* Glow ring behind character */
+    .char-glow {
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,183,197,0.4) 0%, transparent 70%);
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: glow-pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { transform: translateX(-50%) scale(1);    opacity: 0.4; }
+      50%       { transform: translateX(-50%) scale(1.12); opacity: 0.7; }
+    }
+
+    /* Falling petals */
+    .petal {
+      position: absolute;
+      font-size: 14px;
+      animation: petal-fall linear infinite;
+      opacity: 0.7;
+    }
+
+    @keyframes petal-fall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 0.7; }
+      100% { transform: translateY(420px) rotate(360deg); opacity: 0;   }
+    }
+
+    /* ── DIALOGUE BOX ───────────────────────────────────────
+       Bottom section — Pokemon-style text box
+    ───────────────────────────────────────────────────────── */
+    .dialogue-box {
+      background: white;
+      padding: 20px 24px 16px;
+      border-top: 3px solid #E8C5FF;
+      position: relative;
+      min-height: 160px;
+    }
+
+    /* Character name tag */
+    .dialogue-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #B088C4;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    /* Main dialogue text */
+    .dialogue-text {
+      font-size: 15px;
+      color: #3A2A5A;
+      line-height: 1.7;
+      min-height: 64px;
+    }
+
+    /* The blinking cursor that shows typing is done */
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 16px;
+      background: #B088C4;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 0.8s ease-in-out infinite;
+    }
+
+    /* Bottom row: progress dots + continue button */
+    .dialogue-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    /* Progress dots (like Pokemon's ...▼) */
+    .progress-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #E8C5FF;
+      transition: background 0.3s ease;
+    }
+
+    .dot.active {
+      background: #B088C4;
+    }
+
+    /* Continue / "▼ next" button */
+    .continue-btn {
+      background: #C5A3D4;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 20px;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+
+    .continue-btn:hover {
+      background: #B088C4;
+      transform: scale(1.05);
+    }
+
+    .continue-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 3: NAME INPUT
+       Player types their name, like in Pokemon
+    ══════════════════════════════════════════════════════ */
+    #screen-name {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #F5E8FF 0%, #FFE8F5 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 40px 32px;
+
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+
+    .name-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #7A3090;
+      text-align: center;
+    }
+
+    .name-sub {
+      font-size: 14px;
+      color: #9B6BB5;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* The name input field */
+    .name-input {
+      width: 100%;
+      max-width: 300px;
+      padding: 14px 20px;
+      border: 2px solid #C5A3D4;
+      border-radius: 16px;
+      font-size: 18px;
+      font-family: inherit;
+      color: #3A2A5A;
+      text-align: center;
+      outline: none;
+      background: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .name-input:focus {
+      border-color: #B088C4;
+      box-shadow: 0 0 0 3px rgba(197, 163, 212, 0.3);
+    }
+
+    /* Big start button */
+    .start-game-btn {
+      background: linear-gradient(135deg, #C5A3D4, #FFB7C5);
+      border: none;
+      border-radius: 24px;
+      padding: 14px 48px;
+      color: white;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(197, 163, 212, 0.4);
+    }
+
+    .start-game-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(197, 163, 212, 0.6);
+    }
+
+    .start-game-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TRANSITION OVERLAY
+       Full screen flash between screens — like Pokemon
+       when you press A and it flashes white
+    ══════════════════════════════════════════════════════ */
+    #transition {
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+      transition: opacity 0.2s ease;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="game-screen">
+
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 1: TITLE SCREEN
+  ══════════════════════════════════════════════════ -->
+  <div id="screen-title" onclick="goToIntro()">
+
+    <!-- Floating sparkles (positioned randomly via JS) -->
+    <div class="sparkle" style="top:15%;left:12%;animation-delay:0s;">✦</div>
+    <div class="sparkle" style="top:25%;right:15%;animation-delay:1s;">✧</div>
+    <div class="sparkle" style="top:60%;left:8%;animation-delay:2s;">✦</div>
+    <div class="sparkle" style="top:70%;right:10%;animation-delay:0.5s;">✧</div>
+    <div class="sparkle" style="top:40%;left:5%;animation-delay:1.5s;">⋆</div>
+    <div class="sparkle" style="top:80%;left:40%;animation-delay:2.5s;">✦</div>
+    <div class="sparkle" style="top:10%;left:55%;animation-delay:0.8s;">✧</div>
+    <div class="sparkle" style="top:50%;right:5%;animation-delay:1.8s;">⋆</div>
+
+    <!-- Small "THE" above title -->
+    <div class="game-title-small" id="titleSmall">The</div>
+
+    <!-- Main game title -->
+    <div class="game-title" id="titleMain">
+      <span class="title-gradient">Mind Garden</span>
+    </div>
+
+    <!-- Tagline -->
+    <div class="game-tagline" id="titleTagline">
+      Explore the world inside your head.<br>
+      Discover how your brain tricks you every day.
+    </div>
+
+    <!-- Tap to continue prompt -->
+    <div class="tap-prompt" id="tapPrompt">✦ TAP TO BEGIN ✦</div>
+
+  </div><!-- end screen-title -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 2: CHARACTER INTRO
+       Rosie fills the screen — Pokemon Professor Oak style
+  ══════════════════════════════════════════════════ -->
+  <div id="screen-intro">
+
+    <!-- Top half: character stage -->
+    <div class="char-stage">
+
+      <!-- Decorative background circles -->
+      <div class="bg-circle" style="width:300px;height:300px;background:#FFB7C5;top:-50px;left:-80px;animation:float-slow 6s ease-in-out infinite;"></div>
+      <div class="bg-circle" style="width:200px;height:200px;background:#C5A3D4;top:20px;right:-60px;animation:float-med 5s ease-in-out infinite 1s;"></div>
+      <div class="bg-circle" style="width:150px;height:150px;background:#A8D8FF;bottom:40px;right:-30px;animation:float-slow 7s ease-in-out infinite 2s;"></div>
+
+      <!-- Falling petals -->
+      <div class="petal" style="left:10%;animation-duration:5s;animation-delay:0s;">🌸</div>
+      <div class="petal" style="left:30%;animation-duration:7s;animation-delay:1s;">🌸</div>
+      <div class="petal" style="left:60%;animation-duration:6s;animation-delay:2s;">🌸</div>
+      <div class="petal" style="left:80%;animation-duration:8s;animation-delay:0.5s;">🌸</div>
+      <div class="petal" style="left:50%;animation-duration:5.5s;animation-delay:3s;">🌷</div>
+
+      <!-- Glow behind character -->
+      <div class="char-glow"></div>
+
+      <!-- THE CHARACTER — Rosie, big and centered -->
+      <div class="character-wrap" id="charWrap">
+        <svg width="260" height="320" viewBox="0 0 260 320" xmlns="http://www.w3.org/2000/svg">
+
+          <!--
+          HOW TO READ THIS SVG:
+          SVG draws shapes from bottom layer to top.
+          So we draw:
+          1. Body (bottom)
+          2. Head (on top of body)
+          3. Ears (behind head — drawn before head)
+          4. Face details (on top of head)
+          5. Accessories (very top)
+          -->
+
+          <!-- ── BODY ── -->
+          <ellipse cx="130" cy="240" rx="75" ry="72" fill="#FFB7C5"/>
+          <!-- little belly highlight -->
+          <ellipse cx="130" cy="235" rx="40" ry="38" fill="rgba(255,255,255,0.25)"/>
+
+          <!-- tiny hands -->
+          <ellipse cx="62"  cy="225" rx="18" ry="14" fill="#FFB7C5"/>
+          <ellipse cx="198" cy="225" rx="18" ry="14" fill="#FFB7C5"/>
+
+          <!-- ── EARS (drawn before head so they appear behind) ── -->
+          <!-- left ear -->
+          <ellipse cx="88"  cy="55" rx="22" ry="38" fill="#FFB7C5"/>
+          <ellipse cx="88"  cy="55" rx="13" ry="26" fill="#FF8FA8"/>
+          <!-- right ear -->
+          <ellipse cx="172" cy="55" rx="22" ry="38" fill="#FFB7C5"/>
+          <ellipse cx="172" cy="55" rx="13" ry="26" fill="#FF8FA8"/>
+
+          <!-- ── HEAD ── -->
+          <circle cx="130" cy="138" r="68" fill="#FFB7C5"/>
+          <!-- head highlight (makes it look soft/3D) -->
+          <ellipse cx="112" cy="116" rx="22" ry="16" fill="rgba(255,255,255,0.3)" transform="rotate(-20,112,116)"/>
+
+          <!-- ── EYES ── -->
+          <!-- eye whites -->
+          <ellipse cx="108" cy="132" rx="16" ry="17" fill="white"/>
+          <ellipse cx="152" cy="132" rx="16" ry="17" fill="white"/>
+          <!-- eye pupils -->
+          <circle cx="110" cy="134" r="11" fill="#3A2A5A"/>
+          <circle cx="154" cy="134" r="11" fill="#3A2A5A"/>
+          <!-- pupil shine dots -->
+          <circle cx="113" cy="130" r="4"  fill="white"/>
+          <circle cx="157" cy="130" r="4"  fill="white"/>
+          <circle cx="106" cy="138" r="2"  fill="white"/>
+          <circle cx="150" cy="138" r="2"  fill="white"/>
+
+          <!-- ── BLUSH CHEEKS ── -->
+          <ellipse cx="90"  cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+          <ellipse cx="170" cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+
+          <!-- ── NOSE + MOUTH ── -->
+          <ellipse cx="130" cy="155" rx="7" ry="5" fill="#FF8FA8"/>
+          <!-- happy smile -->
+          <path d="M114 164 Q130 178 146 164"
+                stroke="#3A2A5A" stroke-width="2.5"
+                fill="none" stroke-linecap="round"/>
+
+          <!-- ── BOW ACCESSORY (top of head) ── -->
+          <!-- left wing of bow -->
+          <path d="M96 85 L116 98 L96 111 Z"  fill="#FF6B9E"/>
+          <!-- right wing of bow -->
+          <path d="M136 85 L116 98 L136 111 Z" fill="#FF6B9E"/>
+          <!-- bow center knot -->
+          <circle cx="116" cy="98" r="9" fill="#FF8FB8"/>
+          <!-- bow shine -->
+          <circle cx="112" cy="94" r="3" fill="rgba(255,255,255,0.5)"/>
+
+          <!-- ── WAND ── -->
+          <line x1="198" y1="180" x2="230" y2="140"
+                stroke="#C5A3D4" stroke-width="5"
+                stroke-linecap="round"/>
+          <!-- wand star tip -->
+          <circle cx="232" cy="136" r="14" fill="#FFE566"/>
+          <text x="232" y="141" font-size="14"
+                text-anchor="middle" fill="#C8920A">✦</text>
+
+        </svg>
+      </div><!-- end character-wrap -->
+
+    </div><!-- end char-stage -->
+
+
+    <!-- Bottom half: dialogue box -->
+    <div class="dialogue-box">
+      <div class="dialogue-name">✨ Rosie — Your Mind Guide</div>
+
+      <!-- This is where the typed text appears -->
+      <div class="dialogue-text" id="dialogueText">
+        <span id="typedText"></span><span class="cursor" id="cursor"></span>
+      </div>
+
+      <!-- Footer: dots + button -->
+      <div class="dialogue-footer">
+        <!-- Progress dots — one per dialogue line -->
+        <div class="progress-dots" id="progressDots">
+          <!-- JS fills these in based on how many lines there are -->
+        </div>
+        <button class="continue-btn" id="continueBtn" onclick="nextDialogue()">
+          Next ▼
+        </button>
+      </div>
+    </div><!-- end dialogue-box -->
+
+  </div><!-- end screen-intro -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 3: NAME INPUT
+  ══════════════════════════════════════════════════ -->
+  <div id="screen-name">
+
+    <!-- Small Rosie avatar up top -->
+    <svg width="90" height="90" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="130" cy="220" rx="75" ry="50" fill="#FFB7C5"/>
+      <ellipse cx="88"  cy="55"  rx="22" ry="38" fill="#FFB7C5"/>
+      <ellipse cx="172" cy="55"  rx="22" ry="38" fill="#FFB7C5"/>
+      <circle  cx="130" cy="138" r="68"  fill="#FFB7C5"/>
+      <ellipse cx="108" cy="132" rx="16" ry="17" fill="white"/>
+      <ellipse cx="152" cy="132" rx="16" ry="17" fill="white"/>
+      <circle  cx="110" cy="134" r="11"  fill="#3A2A5A"/>
+      <circle  cx="154" cy="134" r="11"  fill="#3A2A5A"/>
+      <circle  cx="113" cy="130" r="4"   fill="white"/>
+      <circle  cx="157" cy="130" r="4"   fill="white"/>
+      <ellipse cx="90"  cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+      <ellipse cx="170" cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+      <ellipse cx="130" cy="155" rx="7"  ry="5" fill="#FF8FA8"/>
+      <path d="M114 164 Q130 178 146 164" stroke="#3A2A5A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+
+    <div class="name-title">What's your name, explorer?</div>
+    <div class="name-sub">
+      Rosie will remember you throughout<br>your journey through The Mind Garden~ 🌸
+    </div>
+
+    <!--
+      oninput="updateNameBtn()" runs the function
+      every time the user types a character
+    -->
+    <input
+      class="name-input"
+      id="nameInput"
+      type="text"
+      maxlength="16"
+      placeholder="Enter your name..."
+      oninput="updateNameBtn()"
+    />
+
+    <button class="start-game-btn" id="startBtn" onclick="startGame()" disabled
+            style="opacity:0.5;cursor:not-allowed;">
+      Enter the Garden 🌸
+    </button>
+  </div><!-- end screen-name -->
+
+
+  <!-- Flash transition overlay -->
+  <div id="transition"></div>
+
+</div><!-- end game-screen -->
+
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT — THE BRAIN OF THE GAME
+     This controls all the logic:
+     - What shows when
+     - The typewriter dialogue effect
+     - Screen transitions
+     Everything is commented so you understand each part!
+══════════════════════════════════════════════════════ -->
+<script>
+
+  // ── DIALOGUE LINES ──────────────────────────────────────
+  // This array holds everything Rosie says.
+  // To add more lines, just add more strings to this array!
+  // ────────────────────────────────────────────────────────
+  const dialogueLines = [
+    "Hi there! I'm Rosie~ ✨ Welcome to The Mind Garden!",
+    "This is a magical world inside your own mind. Every garden here hides a secret about how your brain works.",
+    "Your brain is incredible... but it also tricks you. Every. Single. Day. 🧠",
+    "Confirmation Bias. Dunning-Kruger. The Spotlight Effect. These are the tricks it plays.",
+    "Together we'll explore each one, do fun experiments, and catch your brain in the act!",
+    "Are you ready to discover what's really going on up there? 🌸"
+  ];
+
+  // ── STATE VARIABLES ──────────────────────────────────────
+  // These track what's currently happening in the game.
+  // ────────────────────────────────────────────────────────
+
+  let currentLine    = 0;   // which dialogue line we're on (0 = first)
+  let isTyping       = false; // is the typewriter currently running?
+  let typingInterval = null;  // stores the setInterval so we can stop it
+
+
+  // ── FUNCTION: showScreen ────────────────────────────────
+  // Shows a screen by fading it in.
+  // Hides all other screens first.
+  //
+  // Parameters:
+  //   screenId — the id of the <div> to show (e.g. 'screen-intro')
+  // ────────────────────────────────────────────────────────
+  function showScreen(screenId) {
+
+    // First, hide ALL screens
+    // querySelectorAll gets every element matching the CSS selector
+    const allScreens = document.querySelectorAll(
+      '#screen-title, #screen-intro, #screen-name'
+    );
+
+    allScreens.forEach(screen => {
+      screen.style.opacity       = '0';
+      screen.style.pointerEvents = 'none'; // can't click hidden screens
+    });
+
+    // Then show the one we want
+    const target = document.getElementById(screenId);
+    // Small delay so the fade-out finishes first
+    setTimeout(() => {
+      target.style.opacity       = '1';
+      target.style.pointerEvents = 'all'; // now clickable
+    }, 100);
+  }
+
+
+  // ── FUNCTION: flashTransition ───────────────────────────
+  // Creates the white flash between screens (like Pokemon!)
+  //
+  // Parameters:
+  //   callback — function to run after the flash
+  // ────────────────────────────────────────────────────────
+  function flashTransition(callback) {
+    const overlay = document.getElementById('transition');
+
+    // Flash in (white)
+    overlay.style.opacity = '1';
+
+    // Then flash out, and run the callback
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+      if (callback) callback(); // run whatever we passed in
+    }, 200);
+  }
+
+
+  // ── FUNCTION: typeText ──────────────────────────────────
+  // Types out text character by character — the typewriter effect!
+  //
+  // Parameters:
+  //   text  — the string to type out
+  //   speed — milliseconds between each character (default 28ms)
+  // ────────────────────────────────────────────────────────
+  function typeText(text, speed = 28) {
+
+    const el = document.getElementById('typedText');
+    el.textContent = ''; // clear previous text
+
+    isTyping = true;
+    let i = 0; // current character index
+
+    // setInterval calls a function repeatedly at a given interval
+    typingInterval = setInterval(() => {
+
+      if (i < text.length) {
+        // Add one more character to the display
+        el.textContent += text[i];
+        i++; // move to next character
+      } else {
+        // We've typed the whole string — stop!
+        clearInterval(typingInterval);
+        isTyping = false;
+      }
+
+    }, speed);
+  }
+
+
+  // ── FUNCTION: buildProgressDots ─────────────────────────
+  // Creates the progress dots at the bottom of the dialogue box.
+  // One dot per dialogue line. The current one lights up purple.
+  // ────────────────────────────────────────────────────────
+  function buildProgressDots() {
+    const container = document.getElementById('progressDots');
+    container.innerHTML = ''; // clear old dots
+
+    dialogueLines.forEach((_, index) => {
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (index === currentLine ? ' active' : '');
+      // ^ adds 'active' class only for current line
+      container.appendChild(dot);
+    });
+  }
+
+
+  // ── FUNCTION: goToIntro ─────────────────────────────────
+  // Called when player taps the title screen.
+  // Transitions to the character intro screen.
+  // ────────────────────────────────────────────────────────
+  function goToIntro() {
+
+    flashTransition(() => {
+      // Show the intro screen
+      showScreen('screen-intro');
+
+      // Animate the character sliding up into frame
+      setTimeout(() => {
+        document.getElementById('charWrap').classList.add('visible');
+      }, 200);
+
+      // Build the progress dots
+      currentLine = 0;
+      buildProgressDots();
+
+      // Start typing the first line after a short pause
+      setTimeout(() => {
+        typeText(dialogueLines[0]);
+      }, 600);
+    });
+  }
+
+
+  // ── FUNCTION: nextDialogue ──────────────────────────────
+  // Called when player clicks "Next ▼"
+  //
+  // If text is still typing → show all text instantly (skip)
+  // If text is done → move to next line
+  // If on last line → go to name screen
+  // ────────────────────────────────────────────────────────
+  function nextDialogue() {
+
+    // If still typing, skip to end of current line
+    if (isTyping) {
+      clearInterval(typingInterval); // stop the typewriter
+      isTyping = false;
+      // Show the full current line immediately
+      document.getElementById('typedText').textContent = dialogueLines[currentLine];
+      return; // don't advance yet — let player read
+    }
+
+    // Move to next dialogue line
+    currentLine++;
+
+    // Check if we've finished all lines
+    if (currentLine >= dialogueLines.length) {
+      // Go to the name input screen!
+      flashTransition(() => {
+        showScreen('screen-name');
+        // Focus the input so player can start typing immediately
+        setTimeout(() => {
+          document.getElementById('nameInput').focus();
+        }, 300);
+      });
+      return;
+    }
+
+    // Update the progress dots
+    buildProgressDots();
+
+    // Type the next line
+    typeText(dialogueLines[currentLine]);
+
+    // Update button text on last line
+    if (currentLine === dialogueLines.length - 1) {
+      document.getElementById('continueBtn').textContent = "Let's go! 🌸";
+    }
+  }
+
+
+  // ── FUNCTION: updateNameBtn ─────────────────────────────
+  // Called every time the player types in the name field.
+  // Enables the start button only when name has 1+ characters.
+  // ────────────────────────────────────────────────────────
+  function updateNameBtn() {
+    const input = document.getElementById('nameInput');
+    const btn   = document.getElementById('startBtn');
+    const hasName = input.value.trim().length > 0;
+
+    if (hasName) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor  = 'pointer';
+    } else {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.style.cursor  = 'not-allowed';
+    }
+  }
+
+
+  // ── FUNCTION: startGame ─────────────────────────────────
+  // Called when player clicks "Enter the Garden 🌸"
+  // This is where you'd transition to the actual game world!
+  // ────────────────────────────────────────────────────────
+  function startGame() {
+    const name = document.getElementById('nameInput').value.trim();
+
+    // Store the player's name so the game can use it
+    // localStorage saves data in the browser even after refresh
+    localStorage.setItem('playerName', name);
+
+    // Flash and then... load the game!
+    flashTransition(() => {
+      // TODO: Replace this alert with loading the actual game world
+      // For now, show a confirmation
+      alert(`Welcome, ${name}! 🌸 The Mind Garden awaits!\n\n(Next: load the actual game world here)`);
+    });
+  }
+
+
+  // ── STARTUP ─────────────────────────────────────────────
+  // This runs immediately when the page loads.
+  // Fade in the title screen with a slight delay.
+  // ────────────────────────────────────────────────────────
+  window.addEventListener('load', () => {
+
+    const title = document.getElementById('screen-title');
+
+    // Small delay before fading in (feels more cinematic)
+    setTimeout(() => {
+      title.style.opacity = '1';
+
+      // Fade in the title elements one by one
+      // Each has a CSS transition with a different delay built in
+      setTimeout(() => {
+        document.getElementById('titleSmall').style.opacity   = '1';
+        document.getElementById('titleMain').style.opacity    = '1';
+        document.getElementById('titleMain').style.transform  = 'translateY(0)';
+        document.getElementById('titleTagline').style.opacity = '1';
+        document.getElementById('tapPrompt').style.opacity    = '1';
+      }, 300);
+
+    }, 400);
+
+  });
+
+</script>
+
+</body>
+</html>
