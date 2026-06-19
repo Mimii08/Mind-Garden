@@ -902,12 +902,17 @@
   // This is where you'd transition to the actual game world!
   // ────────────────────────────────────────────────────────
   function startGame() {
-  const name = document.getElementById('nameInput').value.trim();
-  localStorage.setItem('playerName', name);
-  flashTransition(() => {
-    window.location.href = 'mindgarden_world.html';
-  });
-}
+    const name = document.getElementById('nameInput').value.trim();
+
+    // Store the player's name so the game can use it
+    // localStorage saves data in the browser even after refresh
+    localStorage.setItem('playerName', name);
+
+    // Flash and then go straight into the game world
+    flashTransition(() => {
+      window.location.href = 'mindgarden_world.html';
+    });
+  }
 
 
   // ── STARTUP ─────────────────────────────────────────────
