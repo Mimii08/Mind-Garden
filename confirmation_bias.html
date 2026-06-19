@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Mind Garden — Confirmation Bias Garden</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  background:#1A0A2E;
+  font-family:'DM Sans',system-ui,sans-serif;
+  overflow:hidden;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.game-screen{
+  width:480px;
+  height:640px;
+  position:relative;
+  overflow:hidden;
+  border-radius:24px;
+  box-shadow:0 0 80px rgba(255,183,197,0.4);
+}
+
+/* SKY */
+.sky{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,
+    #FFD6E8 0%,
+    #FFE8F5 35%,
+    #FFF0F8 55%,
+    #FFE8C8 75%,
+    #C8E8B0 75%,
+    #A8D890 100%
+  );
+}
+
+/* CLOUDS */
+.cloud{
+  position:absolute;
+  border-radius:50px;
+  background:rgba(255,255,255,0.9);
+  animation:drift linear infinite;
+}
+@keyframes drift{
+  0%{transform:translateX(520px);}
+  100%{transform:translateX(-200px);}
+}
+
+/* SUN */
+.sun{
+  position:absolute;
+  top:18px;right:60px;
+  width:48px;height:48px;
+  background:#FFE566;
+  border-radius:50%;
+  animation:sun-pulse 3s ease-in-out infinite;
+}
+@keyframes sun-pulse{
+  0%,100%{box-shadow:0 0 0 8px rgba(255,229,102,0.3),0 0 0 16px rgba(255,229,102,0.15);}
+  50%{box-shadow:0 0 0 14px rgba(255,229,102,0.4),0 0 0 28px rgba(255,229,102,0.2);}
+}
+
+/* PETALS */
+.petal{
+  position:absolute;
+  font-size:14px;
+  animation:petal-fall linear infinite;
+  pointer-events:none;
+}
+@keyframes petal-fall{
+  0%{transform:translateY(-10px) rotate(0deg);opacity:0.9;}
+  100%{transform:translateY(660px) rotate(360deg);opacity:0;}
+}
+
+/* CHERRY BLOSSOM TREES */
+.tree{
+  position:absolute;
+  bottom:22%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.tree-top{
+  border-radius:50%;
+  margin-bottom:-8px;
+  animation:sway 4s ease-in-out infinite;
+  position:relative;
+}
+@keyframes sway{
+  0%,100%{transform:rotate(-4deg);}
+  50%{transform:rotate(4deg);}
+}
+.tree-trunk{width:12px;height:38px;background:#C4956A;border-radius:4px;}
+
+/* GROUND */
+.ground{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:22%;
+  background:#A8D890;
+}
+.ground-top{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:13%;
+  background:#C8E8B0;
+  border-radius:100% 100% 0 0;
+}
+
+/* FLOWERS */
+.flower{
+  position:absolute;
+  bottom:21%;
+  font-size:16px;
+  animation:bloom 2.5s ease-in-out infinite;
+}
+@keyframes bloom{
+  0%,100%{transform:scale(1) rotate(-5deg);}
+  50%{transform:scale(1.2) rotate(5deg);}
+}
+
+/* PATH */
+.path{
+  position:absolute;
+  bottom:20%;
+  left:50%;
+  transform:translateX(-50%);
+  width:65px;height:100px;
+  background:rgba(255,220,180,0.5);
+  border-radius:32px 32px 0 0;
+}
+
+/* HUD */
+.hud{
+  position:absolute;
+  top:12px;left:12px;
+  display:flex;gap:6px;
+  z-index:30;
+}
+.hud-pill{
+  background:rgba(255,255,255,0.9);
+  border-radius:20px;
+  padding:5px 12px;
+  font-size:11px;font-weight:600;
+  color:#7A3090;
+  border:1px solid rgba(255,183,197,0.5);
+}
+.world-title{
+  position:absolute;
+  top:12px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(255,255,255,0.9);
+  border-radius:20px;
+  padding:5px 16px;
+  font-size:11px;font-weight:700;
+  color:#E85D8A;
+  border:1px solid rgba(255,183,197,0.5);
+  white-space:nowrap;
+  z-index:30;
+}
+
+/* BACK BUTTON */
+.back-btn{
+  position:absolute;
+  bottom:16px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(255,255,255,0.9);
+  border:1.5px solid #FFB7C5;
+  border-radius:20px;
+  padding:8px 22px;
+  font-size:12px;font-weight:600;
+  color:#E85D8A;
+  cursor:pointer;
+  z-index:30;
+  font-family:inherit;
+}
+.back-btn:hover{background:white;}
+
+/* ROSIE */
+.rosie-wrap{
+  position:absolute;
+  bottom:23%;left:10%;
+  animation:rosie-bounce 1.3s ease-in-out infinite;
+  z-index:15;cursor:pointer;
+}
+@keyframes rosie-bounce{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-7px);}
+}
+
+/* SPEECH BUBBLE */
+.bubble{
+  position:absolute;
+  bottom:calc(23% + 72px);
+  left:5%;
+  background:white;
+  border:1.5px solid #FFD6E8;
+  border-radius:16px;
+  padding:10px 13px;
+  max-width:185px;
+  font-size:11.5px;
+  color:#3A2A5A;
+  line-height:1.55;
+  box-shadow:0 2px 12px rgba(255,150,180,0.2);
+  z-index:25;
+}
+.bubble::after{
+  content:'';
+  position:absolute;
+  bottom:-10px;left:20px;
+  border:5px solid transparent;
+  border-top-color:white;
+}
+.bubble-name{
+  font-size:10px;font-weight:700;
+  color:#E85D8A;
+  margin-bottom:3px;
+}
+.cursor{
+  display:inline-block;
+  width:2px;height:13px;
+  background:#E85D8A;
+  margin-left:1px;
+  vertical-align:middle;
+  animation:blink 0.9s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:0.2;}50%{opacity:1;}}
+.bubble-tap{
+  font-size:10px;color:#C5A3D4;
+  margin-top:5px;text-align:right;
+  opacity:0;transition:opacity 0.3s;
+}
+.bubble-tap.show{opacity:1;}
+
+/* ══════════════════════════════
+   EXPERIMENT CARD
+══════════════════════════════ */
+.experiment-card{
+  position:absolute;
+  bottom:24%;
+  left:50%;transform:translateX(-50%);
+  width:88%;
+  background:rgba(255,255,255,0.97);
+  border-radius:22px;
+  padding:20px 18px;
+  border:2px solid #FFD6E8;
+  box-shadow:0 8px 32px rgba(255,150,180,0.2);
+  z-index:20;
+  display:none;
+}
+.experiment-card.show{display:block;}
+
+.exp-number{
+  font-size:10px;font-weight:700;
+  letter-spacing:2px;
+  color:#E85D8A;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.exp-question{
+  font-size:14px;font-weight:600;
+  color:#3A2A5A;
+  line-height:1.6;
+  margin-bottom:14px;
+}
+.choice-btn{
+  width:100%;
+  padding:10px 14px;
+  margin-bottom:8px;
+  border-radius:14px;
+  border:1.5px solid #FFD6E8;
+  background:white;
+  color:#3A2A5A;
+  font-size:12.5px;
+  font-family:inherit;
+  cursor:pointer;
+  text-align:left;
+  transition:all 0.2s;
+  line-height:1.4;
+}
+.choice-btn:hover{
+  background:#FFF0F8;
+  border-color:#FFB7C5;
+  transform:translateX(3px);
+}
+.choice-btn.selected-correct{
+  background:#E8F8E8;
+  border-color:#5CB85C;
+  color:#2A5A2A;
+}
+.choice-btn.selected-bias{
+  background:#FFF0F8;
+  border-color:#E85D8A;
+  color:#5A1A3A;
+}
+.choice-btn.revealed-correct{
+  background:#E8F8E8;
+  border-color:#5CB85C;
+  opacity:0.7;
+}
+
+/* Result box inside card */
+.result-box{
+  background:#FFF8FC;
+  border-radius:12px;
+  padding:12px;
+  margin-top:10px;
+  border:1px solid #FFD6E8;
+  font-size:12px;
+  color:#3A2A5A;
+  line-height:1.65;
+  display:none;
+}
+.result-box.show{display:block;}
+.result-title{
+  font-size:13px;font-weight:700;
+  margin-bottom:5px;
+}
+.result-xp{
+  display:inline-block;
+  background:#FFD6E8;
+  color:#E85D8A;
+  font-size:10px;font-weight:700;
+  padding:2px 10px;
+  border-radius:10px;
+  margin-top:6px;
+}
+.next-btn{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border-radius:14px;
+  background:linear-gradient(135deg,#FFB7C5,#C5A3D4);
+  border:none;
+  color:white;
+  font-size:13px;font-weight:700;
+  font-family:inherit;
+  cursor:pointer;
+  transition:transform 0.15s;
+}
+.next-btn:hover{transform:scale(1.02);}
+
+/* ══════════════════════════════
+   AI REPORT SCREEN
+══════════════════════════════ */
+.report-screen{
+  position:absolute;
+  inset:0;
+  background:rgba(255,240,248,0.98);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  padding:28px 20px;
+  z-index:50;
+  overflow-y:auto;
+}
+.report-screen.show{display:flex;}
+.report-title{
+  font-size:20px;font-weight:800;
+  color:#7A3090;
+  margin-bottom:4px;
+  text-align:center;
+}
+.report-sub{
+  font-size:12px;color:#C5A3D4;
+  margin-bottom:16px;text-align:center;
+}
+.report-score{
+  font-size:64px;font-weight:800;
+  color:#E85D8A;
+  line-height:1;
+  margin-bottom:4px;
+}
+.report-score-label{
+  font-size:12px;color:#C5A3D4;
+  margin-bottom:16px;
+}
+.report-card{
+  width:100%;
+  background:white;
+  border-radius:16px;
+  padding:16px;
+  border:1.5px solid #FFD6E8;
+  margin-bottom:12px;
+  text-align:left;
+}
+.report-card-title{
+  font-size:12px;font-weight:700;
+  color:#E85D8A;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.report-card-text{
+  font-size:13px;color:#3A2A5A;
+  line-height:1.7;
+}
+.loading-text{
+  font-size:13px;color:#C5A3D4;
+  text-align:center;
+  animation:pulse-text 1.5s ease-in-out infinite;
+}
+@keyframes pulse-text{
+  0%,100%{opacity:0.4;}50%{opacity:1;}
+}
+.report-btns{
+  display:flex;gap:10px;
+  width:100%;
+  margin-top:8px;
+}
+.report-btn{
+  flex:1;padding:11px;
+  border-radius:14px;
+  border:none;
+  font-size:13px;font-weight:700;
+  font-family:inherit;
+  cursor:pointer;
+}
+.btn-home{
+  background:#FFD6E8;color:#E85D8A;
+}
+.btn-next{
+  background:linear-gradient(135deg,#C5A3D4,#9B6BB5);
+  color:white;
+}
+
+/* TOAST */
+.toast{
+  position:absolute;
+  bottom:70px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(58,42,90,0.92);
+  color:white;font-size:12px;
+  padding:10px 20px;border-radius:20px;
+  white-space:nowrap;z-index:60;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.3s;
+}
+.toast.show{opacity:1;}
+
+/* XP POPUP */
+.xp-popup{
+  position:absolute;
+  font-size:20px;font-weight:800;
+  color:#E85D8A;
+  pointer-events:none;
+  z-index:60;
+  opacity:0;
+}
+.xp-popup.fire{
+  animation:xp-fly 1.2s ease-out forwards;
+}
+@keyframes xp-fly{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  100%{opacity:0;transform:translateY(-60px) scale(1.4);}
+}
+</style>
+</head>
+<body>
+
+<div class="game-screen">
+
+  <!-- BACKGROUND -->
+  <div class="sky"></div>
+  <div class="sun"></div>
+
+  <!-- CLOUDS -->
+  <div class="cloud" style="width:90px;height:34px;top:35px;animation-duration:18s;animation-delay:0s;"></div>
+  <div class="cloud" style="width:60px;height:22px;top:48px;animation-duration:18s;animation-delay:0s;"></div>
+  <div class="cloud" style="width:108px;height:38px;top:24px;animation-duration:24s;animation-delay:-10s;"></div>
+  <div class="cloud" style="width:70px;height:26px;top:38px;animation-duration:24s;animation-delay:-10s;"></div>
+
+  <!-- PETALS -->
+  <div class="petal" style="left:5%;animation-duration:5s;animation-delay:0s;">🌸</div>
+  <div class="petal" style="left:18%;animation-duration:7s;animation-delay:1s;">🌸</div>
+  <div class="petal" style="left:38%;animation-duration:6s;animation-delay:2s;">🌸</div>
+  <div class="petal" style="left:55%;animation-duration:8s;animation-delay:0.5s;">🌸</div>
+  <div class="petal" style="left:72%;animation-duration:5.5s;animation-delay:3s;">🌸</div>
+  <div class="petal" style="left:88%;animation-duration:7s;animation-delay:1.5s;">🌸</div>
+
+  <!-- CHERRY BLOSSOM TREES -->
+  <div class="tree" style="left:2%;">
+    <div class="tree-top" style="width:65px;height:65px;background:#FFB7C5;animation-delay:0s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+  <div class="tree" style="left:10%;">
+    <div class="tree-top" style="width:50px;height:50px;background:#FFC5D0;animation-delay:0.5s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+  <div class="tree" style="right:3%;">
+    <div class="tree-top" style="width:70px;height:70px;background:#FFB7C5;animation-delay:0.8s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+  <div class="tree" style="right:12%;">
+    <div class="tree-top" style="width:52px;height:52px;background:#FFC5D0;animation-delay:1.2s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <!-- FLOWERS -->
+  <div class="flower" style="left:22%;animation-delay:0s;">🌸</div>
+  <div class="flower" style="left:38%;animation-delay:0.6s;">🌷</div>
+  <div class="flower" style="left:60%;animation-delay:1.1s;">🌸</div>
+  <div class="flower" style="left:74%;animation-delay:0.4s;">🌼</div>
+
+  <!-- PATH + GROUND -->
+  <div class="path"></div>
+  <div class="ground"><div class="ground-top"></div></div>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-pill">⭐ <span id="xpCount">0</span> XP</div>
+    <div class="hud-pill">Q <span id="qNum">1</span>/3</div>
+  </div>
+  <div class="world-title">🌸 Confirmation Bias Garden</div>
+
+  <!-- ROSIE -->
+  <div class="rosie-wrap" id="rosieWrap" onclick="nextLine()">
+    <svg width="50" height="62" viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="130" cy="240" rx="75" ry="58" fill="#FFB7C5"/>
+      <ellipse cx="88" cy="55" rx="22" ry="38" fill="#FFB7C5"/>
+      <ellipse cx="88" cy="55" rx="13" ry="26" fill="#FF8FA8"/>
+      <ellipse cx="172" cy="55" rx="22" ry="38" fill="#FFB7C5"/>
+      <ellipse cx="172" cy="55" rx="13" ry="26" fill="#FF8FA8"/>
+      <circle cx="130" cy="138" r="68" fill="#FFB7C5"/>
+      <ellipse cx="108" cy="132" rx="16" ry="17" fill="white"/>
+      <ellipse cx="152" cy="132" rx="16" ry="17" fill="white"/>
+      <circle cx="110" cy="134" r="11" fill="#3A2A5A"/>
+      <circle cx="154" cy="134" r="11" fill="#3A2A5A"/>
+      <circle cx="113" cy="130" r="4" fill="white"/>
+      <circle cx="157" cy="130" r="4" fill="white"/>
+      <ellipse cx="90" cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+      <ellipse cx="170" cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+      <ellipse cx="130" cy="155" rx="7" ry="5" fill="#FF8FA8"/>
+      <path d="M114 164 Q130 178 146 164" stroke="#3A2A5A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M96 85 L116 98 L96 111 Z" fill="#FF6B9E"/>
+      <path d="M136 85 L116 98 L136 111 Z" fill="#FF6B9E"/>
+      <circle cx="116" cy="98" r="9" fill="#FF8FB8"/>
+    </svg>
+  </div>
+
+  <!-- SPEECH BUBBLE -->
+  <div class="bubble" id="bubble">
+    <div class="bubble-name">✨ Rosie</div>
+    <span id="bubbleText"></span><span class="cursor"></span>
+    <div class="bubble-tap" id="bubbleTap">tap to continue ▼</div>
+  </div>
+
+  <!-- EXPERIMENT CARD -->
+  <div class="experiment-card" id="expCard">
+    <div class="exp-number" id="expNumber">Experiment 1 of 3</div>
+    <div class="exp-question" id="expQuestion"></div>
+    <div id="choicesWrap"></div>
+    <div class="result-box" id="resultBox">
+      <div class="result-title" id="resultTitle"></div>
+      <div id="resultText"></div>
+      <span class="result-xp" id="resultXP"></span>
+      <button class="next-btn" id="nextBtn" onclick="nextExperiment()">Next experiment →</button>
+    </div>
+  </div>
+
+  <!-- BACK BUTTON -->
+  <button class="back-btn" onclick="goHome()">← Back to Garden</button>
+
+  <!-- AI REPORT SCREEN -->
+  <div class="report-screen" id="reportScreen">
+    <div class="report-title">🧠 Your Bias Report</div>
+    <div class="report-sub">Powered by real AI analysis</div>
+    <div class="report-score" id="reportScore">—</div>
+    <div class="report-score-label">Confirmation Bias Resistance Score</div>
+    <div class="report-card">
+      <div class="report-card-title">What is Confirmation Bias?</div>
+      <div class="report-card-text">Your brain naturally seeks information that confirms what you already believe — and ignores what doesn't. This is called Confirmation Bias, and it affects everyone, every day.</div>
+    </div>
+    <div class="report-card" id="aiCard">
+      <div class="report-card-title">✨ Your Personal Analysis</div>
+      <div class="report-card-text">
+        <div class="loading-text" id="loadingText">Rosie is analyzing your choices... 🌸</div>
+        <div id="aiText" style="display:none;line-height:1.7;font-size:13px;color:#3A2A5A;"></div>
+      </div>
+    </div>
+    <div class="report-card">
+      <div class="report-card-title">The Science</div>
+      <div class="report-card-text">Confirmation bias was first studied by psychologist Peter Wason in 1960. His research showed people naturally test hypotheses by looking for confirming evidence rather than disproving evidence — a pattern that affects everything from news consumption to medical diagnosis.</div>
+    </div>
+    <div class="report-btns">
+      <button class="report-btn btn-home" onclick="goHome()">🏠 Home</button>
+      <button class="report-btn btn-next" onclick="goHome()">🔒 Next World</button>
+    </div>
+  </div>
+
+  <!-- XP POPUP -->
+  <div class="xp-popup" id="xpPopup"></div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ── GAME STATE ───────────────────────────────────────
+const playerName = localStorage.getItem('playerName') || 'Explorer';
+let playerXP     = parseInt(localStorage.getItem('playerXP')) || 0;
+let currentExp   = 0;
+let score        = 0; // how many times player resisted bias
+let choices      = []; // track player's answers for AI report
+let isTyping     = false;
+let typingTimer  = null;
+let lineIndex    = 0;
+
+// ── ROSIE'S INTRO LINES ──────────────────────────────
+const INTRO_LINES = [
+  `Welcome to the Confirmation Bias Garden, ${playerName}! 🌸`,
+  `Confirmation Bias is when your brain ONLY looks for information that agrees with what you already believe.`,
+  `We're going to do 3 quick experiments to catch your brain in the act! Ready? Tap the card when it appears~ ✨`,
+];
+
+// ── EXPERIMENTS ──────────────────────────────────────
+// Each experiment has a question and two choices.
+// biasChoice = the one that shows confirmation bias
+// neutralChoice = the open-minded choice
+const EXPERIMENTS = [
+  {
+    question: "You believe coffee is good for you. You see two articles. Which do you click first?",
+    choices: [
+      { text: "☕ \"New study: Coffee drinkers live longer, healthier lives\"", isBias: true },
+      { text: "🔬 \"Scientists find coffee may increase anxiety in some people\"", isBias: false },
+    ],
+    biasResult: {
+      title: "🧠 Confirmation Bias detected!",
+      text: `You chose the article that agreed with you — just like most people! Your brain releases dopamine when it finds confirming information. This feels good, but it means you're missing the full picture.`,
+      xp: 10,
+    },
+    openResult: {
+      title: "✨ Open mind detected!",
+      text: `You chose the challenging article — that takes real mental effort! Most people skip past information that disagrees with them. You just resisted one of the brain's strongest urges.`,
+      xp: 20,
+    },
+  },
+  {
+    question: "You think social media is bad for mental health. A friend shares two posts. Which do you engage with?",
+    choices: [
+      { text: "📱 \"Instagram linked to depression in teens, study confirms\"", isBias: true },
+      { text: "💚 \"New research: Social media helps isolated people find community\"", isBias: false },
+    ],
+    biasResult: {
+      title: "🧠 Confirmation Bias again!",
+      text: `You engaged with the post that matched your view. This is how echo chambers form — we share what confirms us, others do the same, and soon everyone in your feed agrees with you. Reality gets distorted.`,
+      xp: 10,
+    },
+    openResult: {
+      title: "✨ Impressive!",
+      text: `You engaged with the opposing view! This is genuinely hard. Our social feeds are already designed to show us what we agree with. Actively seeking other perspectives is a real cognitive skill.`,
+      xp: 20,
+    },
+  },
+  {
+    question: "You believe your city's crime rate is rising. You have 10 minutes to read the news. You pick:",
+    choices: [
+      { text: "🚨 \"Crime wave hits downtown — residents fear for safety\"", isBias: true },
+      { text: "📊 \"Crime statistics show complex picture — some crimes up, others down\"", isBias: false },
+    ],
+    biasResult: {
+      title: "🧠 Confirmation Bias — third time!",
+      text: `The alarming headline confirmed your fear, so you clicked it. Confirmation bias is why two people with opposite beliefs can read the same news and both feel validated. Headlines are designed to exploit this.`,
+      xp: 10,
+    },
+    openResult: {
+      title: "✨ Critical thinker!",
+      text: `You chose the nuanced, data-driven article — even though it's less emotionally satisfying. This is exactly what researchers mean by \"thinking slow\" (System 2 thinking). You overrode your brain's shortcut.`,
+      xp: 20,
+    },
+  },
+];
+
+// ── TYPEWRITER ───────────────────────────────────────
+function typeText(text, speed=28) {
+  const el = document.getElementById('bubbleText');
+  el.textContent = '';
+  isTyping = true;
+  let i = 0;
+  typingTimer = setInterval(() => {
+    if (i < text.length) {
+      el.textContent += text[i++];
+    } else {
+      clearInterval(typingTimer);
+      isTyping = false;
+      document.getElementById('bubbleTap').classList.add('show');
+    }
+  }, speed);
+}
+
+function nextLine() {
+  if (isTyping) {
+    clearInterval(typingTimer);
+    isTyping = false;
+    document.getElementById('bubbleText').textContent = INTRO_LINES[lineIndex];
+    document.getElementById('bubbleTap').classList.add('show');
+    return;
+  }
+  lineIndex++;
+  document.getElementById('bubbleTap').classList.remove('show');
+  if (lineIndex >= INTRO_LINES.length) {
+    // Hide bubble, show first experiment
+    document.getElementById('bubble').style.opacity = '0';
+    setTimeout(showExperiment, 400);
+    return;
+  }
+  typeText(INTRO_LINES[lineIndex]);
+}
+
+// ── SHOW EXPERIMENT ──────────────────────────────────
+function showExperiment() {
+  const exp = EXPERIMENTS[currentExp];
+  const card = document.getElementById('expCard');
+
+  document.getElementById('expNumber').textContent = `Experiment ${currentExp+1} of ${EXPERIMENTS.length}`;
+  document.getElementById('expQuestion').textContent = exp.question;
+  document.getElementById('resultBox').classList.remove('show');
+  document.getElementById('qNum').textContent = currentExp + 1;
+
+  // Build choice buttons
+  const wrap = document.getElementById('choicesWrap');
+  wrap.innerHTML = '';
+  exp.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = choice.text;
+    btn.onclick = () => pickChoice(i);
+    wrap.appendChild(btn);
+  });
+
+  card.classList.add('show');
+}
+
+// ── PICK CHOICE ──────────────────────────────────────
+function pickChoice(choiceIndex) {
+  const exp = EXPERIMENTS[currentExp];
+  const choice = exp.choices[choiceIndex];
+  const result = choice.isBias ? exp.biasResult : exp.openResult;
+
+  // Track for AI report
+  choices.push({
+    question: exp.question,
+    answer: choice.text,
+    wasBias: choice.isBias,
+  });
+
+  if (!choice.isBias) score++;
+
+  // Style buttons
+  const btns = document.querySelectorAll('.choice-btn');
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === choiceIndex) {
+      btn.className = 'choice-btn ' + (choice.isBias ? 'selected-bias' : 'selected-correct');
+    } else {
+      btn.className = 'choice-btn ' + (!exp.choices[i].isBias ? 'revealed-correct' : '');
+    }
+  });
+
+  // Show result
+  document.getElementById('resultTitle').textContent = result.title;
+  document.getElementById('resultText').textContent = result.text;
+  document.getElementById('resultXP').textContent = `+${result.xp} XP`;
+  document.getElementById('resultBox').classList.add('show');
+
+  // Award XP
+  playerXP += result.xp;
+  localStorage.setItem('playerXP', playerXP);
+  document.getElementById('xpCount').textContent = playerXP;
+  fireXP(`+${result.xp} XP`);
+
+  // Update next button text on last experiment
+  if (currentExp === EXPERIMENTS.length - 1) {
+    document.getElementById('nextBtn').textContent = 'See my Bias Report ✨';
+  }
+}
+
+// ── NEXT EXPERIMENT ──────────────────────────────────
+function nextExperiment() {
+  currentExp++;
+  if (currentExp >= EXPERIMENTS.length) {
+    showReport();
+    return;
+  }
+  document.getElementById('expCard').classList.remove('show');
+  setTimeout(showExperiment, 300);
+}
+
+// ── XP POPUP ANIMATION ───────────────────────────────
+function fireXP(text) {
+  const el = document.getElementById('xpPopup');
+  el.textContent = text;
+  el.style.left = '50%';
+  el.style.bottom = '35%';
+  el.style.transform = 'translateX(-50%)';
+  el.className = 'xp-popup';
+  void el.offsetWidth; // force reflow
+  el.className = 'xp-popup fire';
+}
+
+// ── SHOW REPORT ──────────────────────────────────────
+async function showReport() {
+  document.getElementById('expCard').classList.remove('show');
+  const report = document.getElementById('reportScreen');
+  report.classList.add('show');
+
+  // Calculate score percentage
+  const pct = Math.round((score / EXPERIMENTS.length) * 100);
+  document.getElementById('reportScore').textContent = pct + '%';
+
+  // Call Claude API for personalized analysis
+  await getAIAnalysis(pct);
+}
+
+// ── CLAUDE API CALL ──────────────────────────────────
+async function getAIAnalysis(scorePercent) {
+  const choiceSummary = choices.map((c,i) =>
+    `Q${i+1}: "${c.question}" → Player chose: "${c.answer}" (${c.wasBias ? 'showed bias' : 'resisted bias'})`
+  ).join('\n');
+
+  const prompt = `You are Rosie, a friendly and encouraging guide in an educational game called The Mind Garden. A player just completed the Confirmation Bias experiment.
+
+Player name: ${playerName}
+Score: ${scorePercent}% bias resistance (${score} out of ${EXPERIMENTS.length} times they chose the open-minded option)
+
+Their choices:
+${choiceSummary}
+
+Write a SHORT, warm, personalized analysis (3-4 sentences max) that:
+1. Acknowledges their specific score warmly
+2. Points out one specific choice they made and what it reveals about their thinking
+3. Gives one practical tip for noticing confirmation bias in daily life
+4. Ends with encouragement
+
+Write in Rosie's voice — warm, cute, encouraging, like a knowledgeable friend. Use 1-2 flower emojis max. No bullet points. Just flowing sentences.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || generateFallbackAnalysis(scorePercent);
+
+    document.getElementById('loadingText').style.display = 'none';
+    document.getElementById('aiText').style.display = 'block';
+    document.getElementById('aiText').textContent = text;
+
+  } catch (err) {
+    // Fallback if API fails
+    document.getElementById('loadingText').style.display = 'none';
+    document.getElementById('aiText').style.display = 'block';
+    document.getElementById('aiText').textContent = generateFallbackAnalysis(scorePercent);
+  }
+}
+
+// Fallback if API unavailable
+function generateFallbackAnalysis(pct) {
+  if (pct >= 67) {
+    return `${playerName}, you showed real open-mindedness today! 🌸 You resisted the pull of confirmation bias ${score} out of ${EXPERIMENTS.length} times — that's genuinely impressive. Most people click what confirms them without even noticing. Next time you're scrolling news, pause and ask: "Am I reading this because it's true, or because it agrees with me?" That one question changes everything.`;
+  } else if (pct >= 34) {
+    return `${playerName}, you caught yourself sometimes — and that self-awareness is the first step! 🌸 Confirmation bias is one of the hardest cognitive biases to overcome because it feels completely natural. The experiments where you chose the confirming article? That's your brain doing exactly what evolution trained it to do. The good news: now that you know, you can start catching it in real life.`;
+  } else {
+    return `${playerName}, your brain was working hard to protect its existing beliefs today — and that's completely human! 🌸 Confirmation bias isn't a flaw, it's a feature our brains evolved for efficiency. The fact that you're here, learning about it, already puts you ahead. Try this: next time you feel strongly about something, actively search for one article that disagrees. That's how critical thinkers train themselves.`;
+  }
+}
+
+// ── NAVIGATION ───────────────────────────────────────
+function goHome() {
+  window.location.href = 'mindgarden_world.html';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── STARTUP ──────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.getElementById('xpCount').textContent = playerXP;
+  setTimeout(() => typeText(INTRO_LINES[0]), 600);
+});
+</script>
+</body>
+</html>
