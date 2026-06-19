@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Mind Garden — World Map</title>
+
+  <!--
+  ============================================================
+  THE MIND GARDEN — World Map
+  ============================================================
+  This is the main game world the player lands in after
+  the intro screen. Think of it like the overworld in Pokemon
+  — you can see all the different areas to explore.
+
+  HOW THIS FILE IS ORGANIZED:
+  ─────────────────────────────
+  1. CSS VARIABLES    → change colors/sizes here (top of style)
+  2. BACKGROUND       → sky, clouds, sun, ground
+  3. DECORATIONS      → trees, flowers, path
+  4. PORTALS          → the glowing doors to each world
+  5. PLAYER CHARACTER → your customizable pet
+  6. ROSIE NPC        → the guide character
+  7. DIALOGUE SYSTEM  → speech bubble + typewriter
+  8. HUD              → score, level, world name
+  9. JAVASCRIPT       → all the game logic
+
+  TO CUSTOMIZE:
+  ─────────────────────────────
+  • Change Rosie's lines  → edit ROSIE_LINES array in JS
+  • Add a new portal      → copy a .portal div + add to PORTALS array
+  • Change colors         → edit the :root variables at the top
+  • Change decorations    → add/remove .tree or .flower divs
+  ============================================================
+  -->
+
+  <style>
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 1: CSS VARIABLES
+       ══════════════════════════════════════════════════════
+       These are like settings for your whole game.
+       Change a value here and it updates EVERYWHERE.
+
+       HOW TO USE:
+       var(--color-sky-top) means "use whatever color
+       --color-sky-top is set to"
+    ══════════════════════════════════════════════════════ */
+    :root {
+      /* ── SKY COLORS ── */
+      --color-sky-top:    #C9E8FF;   /* top of sky — light blue */
+      --color-sky-mid:    #E8D5F5;   /* middle — soft purple */
+      --color-sky-low:    #F5C6E0;   /* lower sky — pink */
+      --color-horizon:    #FFDDB3;   /* horizon — warm peach */
+
+      /* ── GROUND COLORS ── */
+      --color-ground:     #9ED4A8;   /* dark grass */
+      --color-ground-top: #B8E8C0;   /* light grass strip at top */
+
+      /* ── ACCENT COLORS ── */
+      --color-accent:     #C5A3D4;   /* purple — used for portals, UI */
+      --color-accent-2:   #FFB7C5;   /* pink — used for trees, Rosie */
+      --color-accent-3:   #A8D8FF;   /* blue — used for player pet */
+
+      /* ── UI COLORS ── */
+      --color-bubble-bg:  #FFFFFF;
+      --color-bubble-border: #E8C5FF;
+      --color-text-dark:  #3A2A5A;
+      --color-text-muted: #9B6BB5;
+
+      /* ── SIZES ── */
+      --game-width:  480px;
+      --game-height: 640px;
+    }
+
+    /* ── RESET ── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #1A0A2E;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── GAME SCREEN CONTAINER ── */
+    .game-screen {
+      width: var(--game-width);
+      height: var(--game-height);
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      box-shadow: 0 0 80px rgba(180,130,220,0.4);
+    }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 2: BACKGROUND
+       Sky gradient + animated clouds + sun
+    ══════════════════════════════════════════════════════ */
+
+    /* The sky — a gradient from top to bottom */
+    .sky {
+      position: absolute;
+      inset: 0;
+      /* gradient goes from top color to bottom color */
+      background: linear-gradient(
+        180deg,
+        var(--color-sky-top)   0%,
+        var(--color-sky-mid)  40%,
+        var(--color-sky-low)  65%,
+        var(--color-horizon)  78%,
+        var(--color-ground)   78%,   /* ground starts at 78% */
+        #9ED4A8               100%
+      );
+    }
+
+    /* Individual cloud shape */
+    .cloud {
+      position: absolute;
+      border-radius: 50px;
+      background: rgba(255,255,255,0.82);
+      /* animation: drift [duration] [timing] [repeat] [delay] */
+      animation: drift linear infinite;
+    }
+
+    /* Cloud drifts from right to left across screen */
+    @keyframes drift {
+      0%   { transform: translateX(520px);  } /* starts off right edge */
+      100% { transform: translateX(-200px); } /* ends off left edge */
+    }
+
+    /* The sun — pulsing glow effect */
+    .sun {
+      position: absolute;
+      top: 22px;
+      right: 70px;
+      width: 54px;
+      height: 54px;
+      background: #FFE566;
+      border-radius: 50%;
+      animation: sun-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes sun-pulse {
+      0%,100% { box-shadow: 0 0 0 8px  rgba(255,229,102,0.3),
+                             0 0 0 16px rgba(255,229,102,0.15); }
+      50%     { box-shadow: 0 0 0 14px rgba(255,229,102,0.4),
+                             0 0 0 28px rgba(255,229,102,0.2); }
+    }
+
+    /* Falling petals — decorative */
+    .petal {
+      position: absolute;
+      font-size: 13px;
+      animation: petal-fall linear infinite;
+      pointer-events: none; /* can't accidentally click them */
+    }
+
+    @keyframes petal-fall {
+      0%   { transform: translateY(-10px) rotate(0deg);   opacity: 0.8; }
+      100% { transform: translateY(660px) rotate(360deg); opacity: 0;   }
+    }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 3: GROUND DECORATIONS
+       Trees, flowers, path
+    ══════════════════════════════════════════════════════ */
+
+    /* Ground strip at bottom */
+    .ground {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 22%;
+      background: var(--color-ground);
+    }
+    .ground-highlight {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 13%;
+      background: var(--color-ground-top);
+      border-radius: 100% 100% 0 0;
+    }
+
+    /* Tree wrapper — positions the whole tree */
+    .tree {
+      position: absolute;
+      bottom: 20%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Tree top (fluffy round bit) */
+    .tree-top {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      margin-bottom: -8px; /* overlaps trunk slightly */
+      animation: tree-sway 4s ease-in-out infinite;
+    }
+
+    /* TO CHANGE TREE COLOR: edit the background in the HTML below */
+    @keyframes tree-sway {
+      0%,100% { transform: rotate(-3deg); }
+      50%     { transform: rotate(3deg);  }
+    }
+
+    /* Tree trunk */
+    .tree-trunk {
+      width: 13px;
+      height: 36px;
+      background: #C4956A;
+      border-radius: 4px;
+    }
+
+    /* Flowers — emoji positioned absolutely */
+    .flower {
+      position: absolute;
+      bottom: 20.5%;
+      font-size: 18px;
+      animation: flower-bloom 2.5s ease-in-out infinite;
+      cursor: default;
+    }
+
+    @keyframes flower-bloom {
+      0%,100% { transform: scale(1) rotate(-5deg);  }
+      50%     { transform: scale(1.18) rotate(5deg); }
+    }
+
+    /* Stone path from top to bottom of ground */
+    .path {
+      position: absolute;
+      bottom: 18%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px;
+      height: 110px;
+      background: rgba(255,220,180,0.55);
+      border-radius: 35px 35px 0 0;
+    }
+
+    /* Mountain silhouettes in background */
+    .mountain {
+      position: absolute;
+      bottom: 22%;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      opacity: 0.25;
+    }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 4: PORTALS
+       Each portal leads to a different bias world.
+
+       TO ADD A NEW PORTAL:
+       1. Copy a .portal-wrap div below
+       2. Change its position (bottom/left/right)
+       3. Change data-world to the new world name
+       4. Add a matching entry to the PORTALS array in JS
+    ══════════════════════════════════════════════════════ */
+
+    .portal-wrap {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* The glowing oval portal shape */
+    .portal {
+      width: 54px;
+      height: 70px;
+      border-radius: 50%;
+      animation: portal-glow 2.2s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      transition: transform 0.2s;
+    }
+
+    .portal:hover {
+      transform: scale(1.12);
+    }
+
+    /* Pulse glow animation for portals */
+    @keyframes portal-glow {
+      0%,100% { filter: brightness(1)   drop-shadow(0 0 8px  currentColor); }
+      50%     { filter: brightness(1.2) drop-shadow(0 0 20px currentColor); }
+    }
+
+    /* Label under each portal */
+    .portal-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      background: rgba(255,255,255,0.88);
+      padding: 3px 10px;
+      border-radius: 10px;
+      white-space: nowrap;
+      border: 1px solid var(--color-bubble-border);
+    }
+
+    /* Lock icon overlay for locked portals */
+    .portal-locked {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 24px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 5: PLAYER CHARACTER
+       The customizable pet that bounces around
+    ══════════════════════════════════════════════════════ */
+
+    .player-wrap {
+      position: absolute;
+      bottom: 21%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: player-bounce 0.9s ease-in-out infinite;
+      cursor: pointer;
+      z-index: 20;
+    }
+
+    @keyframes player-bounce {
+      0%,100% { transform: translateX(-50%) translateY(0px);  }
+      50%     { transform: translateX(-50%) translateY(-9px); }
+    }
+
+    /* Shadow under player */
+    .player-shadow {
+      width: 42px;
+      height: 9px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 50%;
+      margin-top: 2px;
+    }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 6: ROSIE NPC + DIALOGUE
+    ══════════════════════════════════════════════════════ */
+
+    /* Rosie bounces gently */
+    .rosie-wrap {
+      position: absolute;
+      bottom: 22%;
+      left: 14%;
+      animation: rosie-bounce 1.3s ease-in-out infinite;
+      z-index: 15;
+    }
+
+    @keyframes rosie-bounce {
+      0%,100% { transform: translateY(0px);  }
+      50%     { transform: translateY(-7px); }
+    }
+
+    /* Speech bubble above Rosie */
+    .bubble {
+      position: absolute;
+      bottom: calc(22% + 76px);
+      left: 6%;
+      background: var(--color-bubble-bg);
+      border: 1.5px solid var(--color-bubble-border);
+      border-radius: 16px;
+      padding: 11px 14px;
+      max-width: 192px;
+      font-size: 12px;
+      color: var(--color-text-dark);
+      line-height: 1.55;
+      box-shadow: 0 2px 12px rgba(180,130,210,0.18);
+      z-index: 25;
+
+      /* entrance animation */
+      animation: bubble-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    @keyframes bubble-pop {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    /* Little triangle pointer at bottom of bubble */
+    .bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 22px;
+      border: 5px solid transparent;
+      border-top-color: white;
+    }
+
+    .bubble-name {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Blinking cursor in dialogue */
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 13px;
+      background: var(--color-accent);
+      margin-left: 1px;
+      vertical-align: middle;
+      animation: blink 0.9s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 0.2; }
+      50%     { opacity: 1;   }
+    }
+
+    /* "tap to continue" hint in bubble */
+    .bubble-tap {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      margin-top: 6px;
+      text-align: right;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .bubble-tap.show { opacity: 1; }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 7: HUD (Heads Up Display)
+       Score, level, world name shown on screen
+    ══════════════════════════════════════════════════════ */
+
+    .hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      gap: 7px;
+      z-index: 30;
+    }
+
+    .hud-pill {
+      background: rgba(255,255,255,0.88);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #7A5090;
+      border: 1px solid rgba(197,163,212,0.45);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* World title centered at top */
+    .world-title {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.88);
+      border-radius: 20px;
+      padding: 5px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #B088C4;
+      border: 1px solid rgba(197,163,212,0.45);
+      white-space: nowrap;
+      z-index: 30;
+    }
+
+    /* Player name shown top right */
+    .player-name-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #7A5090;
+      border: 1px solid rgba(197,163,212,0.45);
+      z-index: 30;
+    }
+
+
+    /* ══════════════════════════════════════════════════════
+       SECTION 8: NOTIFICATION TOAST
+       Small popup message that fades in/out
+       (used when player clicks a locked portal)
+    ══════════════════════════════════════════════════════ */
+
+    .toast {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(58,42,90,0.92);
+      color: white;
+      font-size: 12px;
+      padding: 10px 20px;
+      border-radius: 20px;
+      white-space: nowrap;
+      z-index: 50;
+
+      /* hidden by default */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .toast.show { opacity: 1; }
+
+  </style>
+</head>
+<body>
+
+<div class="game-screen" id="gameScreen">
+
+  <!-- ══════════════════════════════════════════════════
+       BACKGROUND LAYER
+  ══════════════════════════════════════════════════ -->
+  <div class="sky"></div>
+
+  <!--
+    CLOUDS
+    Each cloud is two overlapping divs for that puffy look.
+    animation-duration controls speed (higher = slower)
+    animation-delay staggers them so they don't all move together
+
+    TO ADD MORE CLOUDS: copy a cloud pair and change the
+    top position and animation values
+  -->
+  <div class="cloud" style="width:88px;height:34px;top:38px;animation-duration:20s;animation-delay:0s;"></div>
+  <div class="cloud" style="width:58px;height:22px;top:52px;animation-duration:20s;animation-delay:0s;"></div>
+
+  <div class="cloud" style="width:105px;height:38px;top:26px;animation-duration:26s;animation-delay:-8s;"></div>
+  <div class="cloud" style="width:68px;height:26px;top:40px;animation-duration:26s;animation-delay:-8s;"></div>
+
+  <div class="cloud" style="width:80px;height:30px;top:55px;animation-duration:22s;animation-delay:-14s;"></div>
+  <div class="cloud" style="width:52px;height:20px;top:67px;animation-duration:22s;animation-delay:-14s;"></div>
+
+  <!-- SUN -->
+  <div class="sun"></div>
+
+  <!--
+    FALLING PETALS
+    Each petal is an emoji with different:
+    - left position (horizontal start)
+    - animation-duration (fall speed)
+    - animation-delay (when it starts falling)
+
+    TO ADD MORE PETALS: copy a line and change the values
+  -->
+  <div class="petal" style="left:8%;animation-duration:6s;animation-delay:0s;">🌸</div>
+  <div class="petal" style="left:22%;animation-duration:8s;animation-delay:1.2s;">🌸</div>
+  <div class="petal" style="left:40%;animation-duration:7s;animation-delay:2.4s;">🌷</div>
+  <div class="petal" style="left:58%;animation-duration:9s;animation-delay:0.6s;">🌸</div>
+  <div class="petal" style="left:74%;animation-duration:6.5s;animation-delay:3.2s;">🌼</div>
+  <div class="petal" style="left:88%;animation-duration:7.5s;animation-delay:1.8s;">🌸</div>
+  <div class="petal" style="left:32%;animation-duration:8.5s;animation-delay:4s;">🌷</div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       GROUND DECORATIONS
+  ══════════════════════════════════════════════════ -->
+
+  <!-- Stone path in center -->
+  <div class="path"></div>
+
+  <!--
+    TREES
+    Each tree has a .tree-top (colored circle) and .tree-trunk.
+    Change the background color of .tree-top to change tree color.
+
+    Position with left/right and bottom values.
+    bottom: 20% keeps them sitting on the ground.
+
+    TO ADD A TREE: copy a .tree div and change position + color
+  -->
+  <div class="tree" style="left:4%;">
+    <div class="tree-top" style="background:#FFB7C5;animation-delay:0s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <div class="tree" style="left:11%;">
+    <div class="tree-top" style="background:#C5A3D4;animation-delay:0.6s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <div class="tree" style="left:26%;">
+    <div class="tree-top" style="background:#A8E6CF;animation-delay:1s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <div class="tree" style="right:5%;">
+    <div class="tree-top" style="background:#FFB7C5;animation-delay:0.3s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <div class="tree" style="right:14%;">
+    <div class="tree-top" style="background:#FFD1A8;animation-delay:0.9s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <div class="tree" style="right:26%;">
+    <div class="tree-top" style="background:#C5A3D4;animation-delay:1.4s;"></div>
+    <div class="tree-trunk"></div>
+  </div>
+
+  <!--
+    FLOWERS
+    Positioned along the ground line (bottom: 20.5%)
+    Change the emoji to use different flowers
+
+    TO ADD MORE: copy a line, change left position + emoji
+  -->
+  <div class="flower" style="left:20%;animation-delay:0s;">🌸</div>
+  <div class="flower" style="left:35%;animation-delay:0.5s;">🌷</div>
+  <div class="flower" style="left:62%;animation-delay:1s;">🌸</div>
+  <div class="flower" style="left:76%;animation-delay:0.3s;">🌼</div>
+  <div class="flower" style="left:45%;animation-delay:1.5s;">🌺</div>
+
+  <!-- Ground -->
+  <div class="ground">
+    <div class="ground-highlight"></div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       PORTALS
+       Each portal leads to a different world.
+
+       data-world   = internal name used in JS
+       data-unlocked = "true" means player can enter
+                       "false" means it shows a lock
+
+       TO ADD A PORTAL:
+       1. Copy this whole .portal-wrap div
+       2. Change position, emoji, label, data-world
+       3. Add entry to PORTALS object in JavaScript
+  ══════════════════════════════════════════════════ -->
+
+  <!-- WORLD 1: Confirmation Bias — UNLOCKED -->
+  <div class="portal-wrap"
+       style="bottom:23%;right:16%;"
+       onclick="enterPortal('confirmation')">
+    <div class="portal"
+         style="background:rgba(255,183,197,0.5);
+                color:#FF8FA8;
+                border:2px solid #FFB7C5;">
+      🌸
+    </div>
+    <div class="portal-label">Confirmation Bias</div>
+  </div>
+
+  <!-- WORLD 2: Dunning-Kruger — LOCKED -->
+  <div class="portal-wrap"
+       style="bottom:36%;right:8%;"
+       onclick="enterPortal('dunning')">
+    <div class="portal"
+         style="background:rgba(197,163,212,0.3);
+                color:#C5A3D4;
+                border:2px solid #C5A3D4;
+                filter:grayscale(0.5);">
+      ☁️
+      <!-- Lock overlay — remove this div when unlocked -->
+      <div class="portal-locked">🔒</div>
+    </div>
+    <div class="portal-label" style="opacity:0.6;">Dunning-Kruger</div>
+  </div>
+
+  <!-- WORLD 3: Echo Chamber — LOCKED -->
+  <div class="portal-wrap"
+       style="bottom:44%;left:10%;"
+       onclick="enterPortal('echo')">
+    <div class="portal"
+         style="background:rgba(168,216,255,0.3);
+                color:#A8D8FF;
+                border:2px solid #A8D8FF;
+                filter:grayscale(0.5);">
+      🪞
+      <div class="portal-locked">🔒</div>
+    </div>
+    <div class="portal-label" style="opacity:0.6;">Echo Chamber</div>
+  </div>
+
+  <!-- WORLD 4: Sunk Cost — LOCKED -->
+  <div class="portal-wrap"
+       style="bottom:36%;left:6%;"
+       onclick="enterPortal('sunk')">
+    <div class="portal"
+         style="background:rgba(168,230,207,0.3);
+                color:#A8E6CF;
+                border:2px solid #A8E6CF;
+                filter:grayscale(0.5);">
+      🌊
+      <div class="portal-locked">🔒</div>
+    </div>
+    <div class="portal-label" style="opacity:0.6;">Sunk Cost</div>
+  </div>
+
+  <!-- WORLD 5: Spotlight Effect — LOCKED -->
+  <div class="portal-wrap"
+       style="bottom:50%;left:50%;transform:translateX(-50%);"
+       onclick="enterPortal('spotlight')">
+    <div class="portal"
+         style="background:rgba(255,229,102,0.3);
+                color:#FFE566;
+                border:2px solid #FFE566;
+                filter:grayscale(0.5);">
+      ⭐
+      <div class="portal-locked">🔒</div>
+    </div>
+    <div class="portal-label" style="opacity:0.6;">Spotlight Effect</div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       ROSIE NPC
+  ══════════════════════════════════════════════════ -->
+  <div class="rosie-wrap" id="rosieWrap" onclick="nextRosieLine()">
+    <svg width="52" height="64" viewBox="0 0 260 300"
+         xmlns="http://www.w3.org/2000/svg">
+      <!-- body -->
+      <ellipse cx="130" cy="240" rx="75" ry="58" fill="#FFB7C5"/>
+      <!-- ears (behind head) -->
+      <ellipse cx="88"  cy="55"  rx="22" ry="38" fill="#FFB7C5"/>
+      <ellipse cx="88"  cy="55"  rx="13" ry="26" fill="#FF8FA8"/>
+      <ellipse cx="172" cy="55"  rx="22" ry="38" fill="#FFB7C5"/>
+      <ellipse cx="172" cy="55"  rx="13" ry="26" fill="#FF8FA8"/>
+      <!-- head -->
+      <circle cx="130" cy="138" r="68" fill="#FFB7C5"/>
+      <!-- eyes -->
+      <ellipse cx="108" cy="132" rx="16" ry="17" fill="white"/>
+      <ellipse cx="152" cy="132" rx="16" ry="17" fill="white"/>
+      <circle  cx="110" cy="134" r="11"  fill="#3A2A5A"/>
+      <circle  cx="154" cy="134" r="11"  fill="#3A2A5A"/>
+      <circle  cx="113" cy="130" r="4"   fill="white"/>
+      <circle  cx="157" cy="130" r="4"   fill="white"/>
+      <!-- blush -->
+      <ellipse cx="90"  cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+      <ellipse cx="170" cy="150" rx="14" ry="9" fill="#FF8FA8" opacity="0.5"/>
+      <!-- nose + smile -->
+      <ellipse cx="130" cy="155" rx="7" ry="5" fill="#FF8FA8"/>
+      <path d="M114 164 Q130 178 146 164"
+            stroke="#3A2A5A" stroke-width="2.5"
+            fill="none" stroke-linecap="round"/>
+      <!-- bow -->
+      <path d="M96 85 L116 98 L96 111 Z"  fill="#FF6B9E"/>
+      <path d="M136 85 L116 98 L136 111 Z" fill="#FF6B9E"/>
+      <circle cx="116" cy="98" r="9" fill="#FF8FB8"/>
+    </svg>
+  </div>
+
+  <!-- Rosie's speech bubble -->
+  <div class="bubble" id="rosieBubble">
+    <div class="bubble-name">✨ Rosie</div>
+    <span id="bubbleText"></span><span class="cursor" id="bubbleCursor"></span>
+    <div class="bubble-tap" id="bubbleTap">tap me to continue ▼</div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       PLAYER CHARACTER
+       Clicking it will open customization later
+  ══════════════════════════════════════════════════ -->
+  <div class="player-wrap" id="playerWrap">
+    <svg width="56" height="56" viewBox="0 0 64 64"
+         id="playerSVG" xmlns="http://www.w3.org/2000/svg">
+      <!-- body -->
+      <ellipse cx="32" cy="44" rx="16" ry="16" id="pBody" fill="#A8D8FF"/>
+      <!-- head -->
+      <circle  cx="32" cy="26" r="14"  id="pHead" fill="#A8D8FF"/>
+      <!-- ears -->
+      <ellipse cx="22" cy="13" rx="5"  ry="8"  id="pEarL" fill="#A8D8FF"/>
+      <ellipse cx="42" cy="13" rx="5"  ry="8"  id="pEarR" fill="#A8D8FF"/>
+      <ellipse cx="22" cy="13" rx="3"  ry="5"  fill="white" opacity="0.45"/>
+      <ellipse cx="42" cy="13" rx="3"  ry="5"  fill="white" opacity="0.45"/>
+      <!-- eyes -->
+      <circle cx="27" cy="25" r="2.5" fill="#3A2A5A"/>
+      <circle cx="37" cy="25" r="2.5" fill="#3A2A5A"/>
+      <circle cx="28" cy="24" r="1"   fill="white"/>
+      <circle cx="38" cy="24" r="1"   fill="white"/>
+      <!-- smile -->
+      <path d="M29 31 Q32 34 35 31"
+            stroke="#3A2A5A" stroke-width="1.2"
+            fill="none" stroke-linecap="round"/>
+      <!-- accessory group — JS fills this in -->
+      <g id="pAcc"></g>
+    </svg>
+    <div class="player-shadow"></div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       HUD
+  ══════════════════════════════════════════════════ -->
+  <div class="hud">
+    <div class="hud-pill">⭐ <span id="xpCount">0</span> XP</div>
+    <div class="hud-pill">🧠 Lv.1</div>
+  </div>
+
+  <div class="world-title">🌸 The Mind Garden</div>
+
+  <!-- Player's name shown top right — filled by JS -->
+  <div class="player-name-badge" id="nameBadge">Explorer</div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+</div><!-- end game-screen -->
+
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+     All game logic lives here.
+     Each section is clearly labeled.
+══════════════════════════════════════════════════════ -->
+<script>
+
+  /* ══════════════════════════════════════════════════
+     SECTION A: GAME STATE
+     Variables that track what's happening in the game.
+     Think of these like the game's memory.
+  ══════════════════════════════════════════════════ */
+
+  // Player data
+  // localStorage.getItem() reads saved data from the browser
+  // || 'Explorer' means "if nothing saved, use 'Explorer'"
+  const playerName  = localStorage.getItem('playerName') || 'Explorer';
+  const playerColor = localStorage.getItem('petColor')   || '#A8D8FF';
+  const playerAcc   = localStorage.getItem('petAcc')     || 'bow';
+
+  // Which worlds the player has unlocked
+  // TO UNLOCK A WORLD: change false to true
+  const unlockedWorlds = {
+    confirmation: true,   // ← first world, always unlocked
+    dunning:      false,
+    echo:         false,
+    sunk:         false,
+    spotlight:    false,
+  };
+
+  // Player's XP score
+  let playerXP = parseInt(localStorage.getItem('playerXP')) || 0;
+
+  // Dialogue state
+  let rosieLineIndex = 0;   // which line Rosie is on
+  let isTyping       = false; // is typewriter running?
+  let typingTimer    = null;  // stores the interval so we can stop it
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION B: ROSIE'S DIALOGUE LINES
+     ══════════════════════════════════════════════════
+     This is what Rosie says when the world loads.
+     TO CHANGE WHAT SHE SAYS: edit these strings!
+     TO ADD MORE LINES: add more strings to the array.
+     Each string is one "page" of dialogue.
+  ══════════════════════════════════════════════════ */
+  const ROSIE_LINES = [
+    // Line 0 — greeting using player's name
+    `Welcome back, ${playerName}! 🌸 This is The Mind Garden — your home base.`,
+
+    // Line 1 — point to first portal
+    `See the glowing pink portal on the right? ➡️ That's the Confirmation Bias Garden — your first stop!`,
+
+    // Line 2 — explain locked worlds
+    `The other portals are locked for now. Complete each world to unlock the next one~ ✨`,
+
+    // Line 3 — call to action
+    `When you're ready, tap the pink portal to begin! I'll be right here if you need me. 💕`,
+  ];
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION C: PORTAL DESTINATIONS
+     ══════════════════════════════════════════════════
+     This object maps each portal's data-world value
+     to what happens when you enter it.
+
+     TO ADD A NEW WORLD:
+     Add a new key matching your portal's data-world,
+     with a title, description, and file to load.
+  ══════════════════════════════════════════════════ */
+  const PORTALS = {
+    confirmation: {
+      title: '🌸 Confirmation Bias Garden',
+      desc:  'Your brain only sees what it already believes.',
+      file:  'confirmation_bias.html',  // ← the file to load (build this next!)
+      unlocked: true,
+    },
+    dunning: {
+      title: '☁️ Dunning-Kruger Cloud',
+      desc:  'Why we think we know more than we do.',
+      file:  'dunning_kruger.html',
+      unlocked: false,
+    },
+    echo: {
+      title: '🪞 Echo Chamber Maze',
+      desc:  'How social media traps your thinking.',
+      file:  'echo_chamber.html',
+      unlocked: false,
+    },
+    sunk: {
+      title: '🌊 Sunk Cost Ocean',
+      desc:  'Why we keep going even when we should stop.',
+      file:  'sunk_cost.html',
+      unlocked: false,
+    },
+    spotlight: {
+      title: '⭐ Spotlight Effect Garden',
+      desc:  'Everyone is watching you... or are they?',
+      file:  'spotlight.html',
+      unlocked: false,
+    },
+  };
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION D: TYPEWRITER EFFECT
+     Types text character by character, like a real
+     dialogue system in an RPG game.
+  ══════════════════════════════════════════════════ */
+
+  /**
+   * typeText — types out a string letter by letter
+   * @param {string} text  — the text to type
+   * @param {number} speed — ms between each character (lower = faster)
+   */
+  function typeText(text, speed = 30) {
+    const el = document.getElementById('bubbleText');
+    el.textContent = '';  // clear previous text
+    isTyping = true;
+    let i = 0;
+
+    // setInterval calls a function every [speed] milliseconds
+    typingTimer = setInterval(() => {
+      if (i < text.length) {
+        el.textContent += text[i]; // add one character
+        i++;
+      } else {
+        // Finished typing — stop interval, show "tap to continue"
+        clearInterval(typingTimer);
+        isTyping = false;
+        document.getElementById('bubbleTap').classList.add('show');
+      }
+    }, speed);
+  }
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION E: ROSIE DIALOGUE CONTROLLER
+     Handles clicking through Rosie's lines.
+  ══════════════════════════════════════════════════ */
+
+  /**
+   * nextRosieLine — called when player clicks Rosie or bubble
+   * If still typing: skip to end of current line
+   * If done typing: advance to next line
+   * If all lines done: hide bubble
+   */
+  function nextRosieLine() {
+
+    // If still typing, skip to full text
+    if (isTyping) {
+      clearInterval(typingTimer);
+      isTyping = false;
+      document.getElementById('bubbleText').textContent =
+        ROSIE_LINES[rosieLineIndex];
+      document.getElementById('bubbleTap').classList.add('show');
+      return;
+    }
+
+    // Advance to next line
+    rosieLineIndex++;
+    document.getElementById('bubbleTap').classList.remove('show');
+
+    // If we've gone through all lines, hide the bubble
+    if (rosieLineIndex >= ROSIE_LINES.length) {
+      document.getElementById('rosieBubble').style.opacity = '0';
+      return;
+    }
+
+    // Type the next line
+    typeText(ROSIE_LINES[rosieLineIndex]);
+  }
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION F: PORTAL INTERACTION
+     What happens when player clicks a portal.
+  ══════════════════════════════════════════════════ */
+
+  /**
+   * enterPortal — called when a portal is clicked
+   * @param {string} worldKey — matches key in PORTALS object
+   */
+  function enterPortal(worldKey) {
+    const portal = PORTALS[worldKey];
+
+    // Check if this world is unlocked
+    if (!portal.unlocked) {
+      // Show a toast message
+      showToast(`🔒 Complete previous worlds to unlock ${portal.title}`);
+      return;
+    }
+
+    // World is unlocked — go there!
+    // For now, show an alert. Later: window.location.href = portal.file
+    showToast(`🌸 Entering ${portal.title}...`);
+
+    // TODO: When you build the world files, replace the line above with:
+    // window.location.href = portal.file;
+    // That redirects the browser to the new HTML file.
+  }
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION G: TOAST NOTIFICATION
+     Small popup message that fades in then out.
+  ══════════════════════════════════════════════════ */
+
+  /**
+   * showToast — shows a temporary notification
+   * @param {string} message — text to display
+   * @param {number} duration — how long to show it (ms)
+   */
+  function showToast(message, duration = 2500) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+
+    // Hide after [duration] milliseconds
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, duration);
+  }
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION H: APPLY PLAYER CUSTOMIZATION
+     Reads the saved pet color/accessory and applies
+     them to the player SVG character.
+  ══════════════════════════════════════════════════ */
+
+  function applyPlayerCustomization() {
+
+    // Set pet color on all body parts
+    ['pBody', 'pHead', 'pEarL', 'pEarR'].forEach(id => {
+      document.getElementById(id).setAttribute('fill', playerColor);
+    });
+
+    // Set accessory
+    const accGroup = document.getElementById('pAcc');
+    accGroup.innerHTML = ''; // clear old accessory
+
+    // Each accessory is SVG shapes added to the <g id="pAcc"> group
+    if (playerAcc === 'bow') {
+      accGroup.innerHTML = `
+        <path d="M24 10 L28 13 L24 16 Z" fill="#FF6B9E"/>
+        <path d="M28 10 L24 13 L28 16 Z" fill="#FF6B9E"/>
+        <circle cx="26" cy="13" r="2" fill="#FF8FB8"/>
+      `;
+    } else if (playerAcc === 'star') {
+      accGroup.innerHTML = `<text x="26" y="11" font-size="11" text-anchor="middle">⭐</text>`;
+    } else if (playerAcc === 'flower') {
+      accGroup.innerHTML = `<text x="26" y="11" font-size="11" text-anchor="middle">🌸</text>`;
+    } else if (playerAcc === 'crown') {
+      accGroup.innerHTML = `<text x="26" y="11" font-size="13" text-anchor="middle">👑</text>`;
+    }
+  }
+
+
+  /* ══════════════════════════════════════════════════
+     SECTION I: STARTUP
+     Runs when the page first loads.
+     Sets up everything.
+  ══════════════════════════════════════════════════ */
+
+  window.addEventListener('load', () => {
+
+    // Show player's name in top right badge
+    document.getElementById('nameBadge').textContent = `🌸 ${playerName}`;
+
+    // Show XP count
+    document.getElementById('xpCount').textContent = playerXP;
+
+    // Apply saved pet customization
+    applyPlayerCustomization();
+
+    // Start Rosie's welcome dialogue after a short pause
+    // (gives the world a moment to "load in" visually)
+    setTimeout(() => {
+      typeText(ROSIE_LINES[0]);
+    }, 800);
+
+  });
+
+</script>
+
+</body>
+</html>
