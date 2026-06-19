@@ -902,19 +902,12 @@
   // This is where you'd transition to the actual game world!
   // ────────────────────────────────────────────────────────
   function startGame() {
-    const name = document.getElementById('nameInput').value.trim();
-
-    // Store the player's name so the game can use it
-    // localStorage saves data in the browser even after refresh
-    localStorage.setItem('playerName', name);
-
-    // Flash and then... load the game!
-    flashTransition(() => {
-      // TODO: Replace this alert with loading the actual game world
-      // For now, show a confirmation
-      alert(`Welcome, ${name}! 🌸 The Mind Garden awaits!\n\n(Next: load the actual game world here)`);
-    });
-  }
+  const name = document.getElementById('nameInput').value.trim();
+  localStorage.setItem('playerName', name);
+  flashTransition(() => {
+    window.location.href = 'mindgarden_world.html';
+  });
+}
 
 
   // ── STARTUP ─────────────────────────────────────────────
